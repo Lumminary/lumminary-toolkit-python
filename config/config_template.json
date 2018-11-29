@@ -1,0 +1,8 @@
+{
+    "api_key": <edited>,
+    "product_uuid": <your-product-uuid>,
+    "api_host": "https://api.lumminary.com/v1",
+    "output_root": <base-directory-for-authorized-datasets>,
+    "export_handler": "export_handler_tsv",
+    "optional": {}
+}
