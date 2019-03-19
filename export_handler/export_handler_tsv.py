@@ -29,7 +29,8 @@ class ExportHandlerTsv(ExportHandlerBase):
         return datasetPath
 
     def update_authorization_processed(self):
-        self._api.post_product_authorization(self._product.product_uuid, self._authorization.authorization_uuid)
+        # Do nothing for plain TSV export, to allow for time to process the authorized dataset
+        return
 
     def authorization_metadata_path(self):
         return os.path.join(self._path, ExportHandlerTsv.FILENAME_AUTHORIZATION_METADATA)
