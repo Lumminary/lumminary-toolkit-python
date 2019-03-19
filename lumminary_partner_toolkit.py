@@ -9,6 +9,57 @@ import logging
 import sys
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+def rrm(dirPath):
+    if not os.path.isdir(dirPath):
+        raise Exception("{0} is not a directory".format(dirPath))
+    
+    for dirChild in  os.listdir(dirPath):
+        childPath = os.path.join(dirPath, dirChild)
+
+        if os.path.isdir(childPath):
+            rrm(childPath)
+        elif os.path.isfile(childPath):
+            os.unlink(childPath)
+        else:
+            raise Exception("Unexpected file type for {0}".format(childPath))
+    
+    os.rmdir(dirPath)
+
+def post_reports(authorizationUuid, productUuid, authorizationReportsBasePath, logging, api):
+    reportsCreated = []
+
+    if os.path.isdir(authorizationReportsBasePath):
+        authorizationReportFiles = os.listdir(authorizationReportsBasePath)
+        logging.info("Uploading {0} report files for authorization {1}".format(
+            len(authorizationReportFiles),
+            authorizationUuid
+        ))
+
+        for reportFilename in authorizationReportFiles:
+            reportPath = os.path.join(authorizationReportsBasePath, reportFilename)
+
+            reportCreated = api.post_authorization_result_file(
+                objConfig["product_uuid"],
+                authorizationUuid,
+                file_report=reportPath,
+                original_filename=reportFilename
+            )
+            reportsCreated.append(reportCreated)
+
+            logging.info("Done uploading reports for authorization {0}".format(authorizationUuid))
+
+        try:
+            rrm(authorizationBasePath)
+        except Exception as authorizationCleanupException:
+            raise Exception("Unable to cleanup authorization {0}. {1}".format(
+                authorizationUuid,
+                str(authorizationCleanupException)
+            ))
+    else:
+        logging.info("No reports directory found for authorization {0}".format(authorizationUuid))
+
+    return reportsCreated
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="This tool pulls Lumminary authorizations data for an product")
     parser.add_argument(
@@ -23,7 +74,7 @@ if __name__ == "__main__":
 
     logging.info("Connecting to the Lumminary API...")
     apiCredentials = Credentials(
-        uuid = objConfig["product_uuid"],
+        login = objConfig["product_uuid"],
         api_key = objConfig["api_key"],
         host = objConfig["api_host"]
     )
@@ -31,15 +82,30 @@ if __name__ == "__main__":
 
     logging.info("Authenticated to the Lumminary api")
 
-    authorizationsPending = api.get_authorizations_queue(objConfig["product_uuid"])
-    logging.info("Fetched {0} authorizations".format(len(authorizationsPending)))
-
     exportHandlerClass = get_export_handler_class(objConfig["export_handler"])
     product = api.get_product(objConfig["product_uuid"])
-    for authorization in authorizationsPending:
-        logging.info("Processing authorization {0}".format(authorization.authorization_uuid))
 
-        exportHandler = exportHandlerClass(objConfig["output_root"], authorization, product, api, objConfig["optional"])
+    if "push_reports" in objConfig["operations"]:
+        try:
+            for authorizationUuid in os.listdir(objConfig["output_root"]) :
+                authorizationBasePath = os.path.join(objConfig["output_root"], authorizationUuid)
+                authorizationReportsBasePath = os.path.join(authorizationBasePath, "reports")
 
-        exportHandler.pull_authorization_data()
-        exportHandler.update_authorization_processed()
+                arrReportsCreated = post_reports(authorizationUuid, objConfig["product_uuid"], authorizationReportsBasePath, logging, api)
+        except Exception as pushReportException:
+            logging.error(pushReportException)
+
+    if "pull_datasets" in objConfig["operations"]:
+        authorizationsPending = api.get_authorizations_queue(objConfig["product_uuid"])
+        logging.info("Fetched {0} authorizations".format(len(authorizationsPending)))
+
+        for authorization in authorizationsPending:
+            try:
+                logging.info("Processing authorization {0}".format(authorization.authorization_uuid))
+
+                exportHandler = exportHandlerClass(objConfig["output_root"], authorization, product, api, objConfig["optional"])
+
+                exportHandler.pull_authorization_data()
+                exportHandler.update_authorization_processed()
+            except Exception as pullDatasetException:
+                logging.error("Unable to pull data for authorization {0} : {1}".format(authorization["authorization_uuid"], str(pullDatasetException)))

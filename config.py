@@ -86,6 +86,13 @@ class Config:
                 "validator": Config._validate_export_handler,
                 "required": True
             },
+            "operations": {
+                "validator": Config._validate_operations,
+                "required": False,
+                "default": [
+                    "pull_datasets"
+                ]
+            },
             "optional": self._clsCustomHandler.get_config_optional_schema()
         }
     
@@ -97,7 +104,7 @@ class Config:
             ))
 
         try:
-            base64.decodestring(apiKey)
+            base64.decodestring(str.encode(apiKey))
         except binascii.Error:
             raise Exception("Expecting a base64-encoded value in the api_key attribute, found {1}".format(
                 apiKey
@@ -138,3 +145,11 @@ class Config:
         if exportHandlerImport not in exportHandlers:
             raise Exception("Invalid export handler `{0}`, possible values : {1}".format(exportHandlerImport, ",".join(exportHandlers)))
 
+    @classmethod
+    def _validate_operations(cls, arrOperations):
+        arrOperationsExpected = ["pull_datasets", "push_reports"]
+
+        operationsUnexpected = set(arrOperations).difference(set(arrOperationsExpected))
+
+        if len(operationsUnexpected):
+            raise Exception("Unexpected operations {0}. Expected values : {1}".format(operationsUnexpected, arrOperationsExpected))

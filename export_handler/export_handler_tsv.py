@@ -19,8 +19,12 @@ class ExportHandlerTsv(ExportHandlerBase):
         datasetPath = self.dna_data_path()
 
         authorizationDnaData = self._api.authorization_dna_data(self._authorization.authorization_uuid)
-        with open(datasetPath, "w") as datasetFile:
+
+        tmpDatasetPath = datasetPath + "_tmp"
+        with open(tmpDatasetPath, "w") as datasetFile:
             datasetFile.write("\n".join(authorizationDnaData))
+
+        os.rename(tmpDatasetPath, datasetPath)
 
         return datasetPath
 
