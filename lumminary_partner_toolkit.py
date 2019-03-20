@@ -9,6 +9,11 @@ import logging
 import sys
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+# Overwrite default encoding globally for the current python2.7 (only) process, to allow non-ascii reports
+reload(sys)
+if sys.getdefaultencoding() == "ascii":
+    sys.setdefaultencoding('latin-1')
+
 def rrm(dirPath):
     if not os.path.isdir(dirPath):
         raise Exception("{0} is not a directory".format(dirPath))

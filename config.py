@@ -104,7 +104,7 @@ class Config:
             ))
 
         try:
-            base64.decodestring(str.encode(apiKey))
+            base64.decodestring(str.encode(str(apiKey)))
         except binascii.Error:
             raise Exception("Expecting a base64-encoded value in the api_key attribute, found {1}".format(
                 apiKey
