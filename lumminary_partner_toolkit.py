@@ -7,12 +7,17 @@ import json
 import argparse
 import logging
 import sys
+
+if sys.version_info.major == 3:
+    from importlib import reload
+
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 # Overwrite default encoding globally for the current python2.7 (only) process, to allow non-ascii reports
-reload(sys)
-if sys.getdefaultencoding() == "ascii":
-    sys.setdefaultencoding('latin-1')
+if sys.version_info.major == 2:
+    reload(sys)
+    if sys.getdefaultencoding() == "ascii":
+        sys.setdefaultencoding('latin-1')
 
 def rrm(dirPath):
     if not os.path.isdir(dirPath):
