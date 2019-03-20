@@ -14,7 +14,8 @@ class ExportHandlerBase(object):
         self._path = os.path.join(self._outputRoot, authorization.authorization_uuid)
 
     def pull_authorization_data(self):
-        os.mkdir(self._path)
+        if not os.path.isdir(self._path):
+            os.mkdir(self._path)
 
         authorizationPath = self.save_authorization()
 
@@ -26,6 +27,9 @@ class ExportHandlerBase(object):
         }
 
         return objAuthorizationData
+
+    def should_pull_atuhorization(self):
+        return not os.path.isdir(self._path)
 
     @classmethod
     def get_config_optional_schema(cls):

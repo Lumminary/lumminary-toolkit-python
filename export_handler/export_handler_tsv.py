@@ -29,6 +29,7 @@ class ExportHandlerTsv(ExportHandlerBase):
         return datasetPath
 
     def update_authorization_processed(self):
+        # Do nothing for plain TSV export, to allow for time to process the authorized dataset
         return
 
     def authorization_metadata_path(self):

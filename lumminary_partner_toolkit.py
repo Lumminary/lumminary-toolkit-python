@@ -109,6 +109,9 @@ if __name__ == "__main__":
                 logging.info("Processing authorization {0}".format(authorization.authorization_uuid))
 
                 exportHandler = exportHandlerClass(objConfig["output_root"], authorization, product, api, objConfig["optional"])
+                if not exportHandler.should_pull_atuhorization():
+                    logging.info("Skipping authorization {0} because Authorization data directory already exists".format(authorization.authorization_uuid))
+                    continue
 
                 exportHandler.pull_authorization_data()
                 exportHandler.update_authorization_processed()
