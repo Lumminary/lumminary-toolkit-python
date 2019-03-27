@@ -37,7 +37,7 @@ def rrm(dirPath):
 
 def post_reports(authorizationUuid, productUuid, authorizationReportsBasePath, logging, api):
     if not os.path.isdir(authorizationReportsBasePath):
-        raise Exception("Expecting reports directory at {0}".format(authorizationReportsBasePath))
+        raise Exception("No reports for authorization {0} at {1}".format(authorizationUuid, authorizationReportsBasePath))
 
     reportsCreated = []
     resultFilePath = os.path.join(authorizationReportsBasePath, "result.json")
