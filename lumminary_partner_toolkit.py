@@ -36,11 +36,51 @@ def rrm(dirPath):
     os.rmdir(dirPath)
 
 def post_reports(authorizationUuid, productUuid, authorizationReportsBasePath, logging, api):
-    reportsCreated = []
+    if not os.path.isdir(authorizationReportsBasePath):
+        raise Exception("Expecting reports directory at {0}".format(authorizationReportsBasePath))
 
-    if os.path.isdir(authorizationReportsBasePath):
+    reportsCreated = []
+    resultFilePath = os.path.join(authorizationReportsBasePath, "result.json")
+
+    if os.path.isfile(resultFilePath):
+        with open(resultFilePath, "r") as f_result:
+            objResult = json.load(f_result)
+
+        if "credentials" in objResult:
+            logging.info("Uploading credentials for authorization {0}".format(authorizationUuid));
+
+            if "url"in objResult["credentials"]:
+                reportsCreated.append(api.post_authorization_result_credentials(
+                    productUuid,
+                    authorizationUuid,
+                    report_url = objResult["credentials"]["url"],
+                    credentials_username = objResult["credentials"]["username"],
+                    credentials_password = objResult["credentials"]["password"]
+                ))
+            else:
+                raise Exception("Expected required 'url' attribute in the 'credentials' object at {0}".format(resultFilePath))
+        elif "physical_product" in objResult:
+            logging.info("Uploading order dispatched report for authorization {0}".format(authorizationUuid))
+
+            if "physical_product_completed" in objResult["physical_product"] and objResult["physical_product"]["physical_product_completed"]:
+                reportsCreated.append(api.post_product_authorization(
+                    productUuid,
+                    authorizationUuid
+                ))
+            else:
+                raise Exception("Expecting 'physical_product_completed' attribute under 'physical_product' in {0}".format(resultFilePath))
+        elif "unfulfillable" in objResult:
+            logging.info("Uploading error report for authorization {0}".format(authorizationUuid))
+
+            if "error" in objResult["unfulfillable"]:
+                reportsCreated.append(api.post_product_authorization_unfulfillable(productUuid, authorizationUuid))
+            else:
+                raise Exception("Expecting 'error' attribute under 'unfulfillable' in {0}".format(resultFilePath))
+        else:
+            raise Exception("Unexpected reports object format {0} in {1}".format(json.dumps(objResult), resultFilePath))    
+    else:
         authorizationReportFiles = os.listdir(authorizationReportsBasePath)
-        logging.info("Uploading {0} report files for authorization {1}".format(
+        logging.info("Uploading {0} report files for authorization...{1}".format(
             len(authorizationReportFiles),
             authorizationUuid
         ))
@@ -56,24 +96,21 @@ def post_reports(authorizationUuid, productUuid, authorizationReportsBasePath, l
             )
             reportsCreated.append(reportCreated)
 
-            logging.info("Done uploading reports for authorization {0}".format(authorizationUuid))
-
-        try:
-            rrm(authorizationBasePath)
-        except Exception as authorizationCleanupException:
-            raise Exception("Unable to cleanup authorization {0}. {1}".format(
-                authorizationUuid,
-                str(authorizationCleanupException)
-            ))
-    else:
-        logging.info("No reports directory found for authorization {0}".format(authorizationUuid))
+    logging.info("Done uploading reports for authorization {0}".format(authorizationUuid))
+    try:
+        rrm(authorizationBasePath)
+    except Exception as authorizationCleanupException:
+        raise Exception("Unable to cleanup authorization {0}. {1}".format(
+            authorizationUuid,
+            str(authorizationCleanupException)
+        ))
 
     return reportsCreated
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="This tool pulls Lumminary authorizations data for an product")
     parser.add_argument(
-        "-config-path",
+        "--config-path",
         dest = "config_path",
         type = str,
         help = "Path to the json config for the Lumminary toolkit"
@@ -82,7 +119,7 @@ if __name__ == "__main__":
     config = Config(args.config_path)
     objConfig = config.parse()
 
-    logging.info("Connecting to the Lumminary API...")
+    logging.info("Connecting to the Lumminary api on {0} as product {1}".format(objConfig["api_host"], objConfig["product_uuid"]))
     apiCredentials = Credentials(
         login = objConfig["product_uuid"],
         api_key = objConfig["api_key"],
@@ -114,6 +151,7 @@ if __name__ == "__main__":
                 logging.info("Processing authorization {0}".format(authorization.authorization_uuid))
 
                 exportHandler = exportHandlerClass(objConfig["output_root"], authorization, product, api, objConfig["optional"])
+
                 if not exportHandler.should_pull_atuhorization():
                     logging.info("Skipping authorization {0} because Authorization data directory already exists".format(authorization.authorization_uuid))
                     continue
@@ -121,4 +159,4 @@ if __name__ == "__main__":
                 exportHandler.pull_authorization_data()
                 exportHandler.update_authorization_processed()
             except Exception as pullDatasetException:
-                logging.error("Unable to pull data for authorization {0} : {1}".format(authorization["authorization_uuid"], str(pullDatasetException)))
+                logging.error("Unable to pull data for authorization {0} : {1}".format(authorization.authorization_uuid, str(pullDatasetException)))
