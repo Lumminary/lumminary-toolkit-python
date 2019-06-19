@@ -80,7 +80,7 @@ def post_reports(authorizationUuid, productUuid, authorizationReportsBasePath, l
             raise Exception("Unexpected reports object format {0} in {1}".format(json.dumps(objResult), resultFilePath))    
     else:
         authorizationReportFiles = os.listdir(authorizationReportsBasePath)
-        logging.info("Uploading {0} report files for authorization...{1}".format(
+        logging.info("Uploading {0} report files for authorization {1}".format(
             len(authorizationReportFiles),
             authorizationUuid
         ))
@@ -121,9 +121,9 @@ if __name__ == "__main__":
 
     logging.info("Connecting to the Lumminary api on {0} as product {1}".format(objConfig["api_host"], objConfig["product_uuid"]))
     apiCredentials = Credentials(
-        login = objConfig["product_uuid"],
+        product_uuid = objConfig["product_uuid"],
         api_key = objConfig["api_key"],
-        host = objConfig["api_host"]
+        api_host = objConfig["api_host"]
     )
     api = LumminaryApi(apiCredentials)
 
