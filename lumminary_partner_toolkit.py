@@ -113,6 +113,7 @@ if __name__ == "__main__":
         "--config-path",
         dest = "config_path",
         type = str,
+        required = True,
         help = "Path to the json config for the Lumminary toolkit"
     )
     args = parser.parse_args()
@@ -138,7 +139,8 @@ if __name__ == "__main__":
                 authorizationBasePath = os.path.join(objConfig["output_root"], authorizationUuid)
                 authorizationReportsBasePath = os.path.join(authorizationBasePath, "reports")
 
-                arrReportsCreated = post_reports(authorizationUuid, objConfig["product_uuid"], authorizationReportsBasePath, logging, api)
+                if os.path.isdir(authorizationReportsBasePath):
+                    arrReportsCreated = post_reports(authorizationUuid, objConfig["product_uuid"], authorizationReportsBasePath, logging, api)
         except Exception as pushReportException:
             logging.error(pushReportException)
 
